@@ -1,11 +1,16 @@
 {% extends 'base.html' %}
-{% block title %} Ваши подписки {% endblock %}
+{% block title %}Ваши подписки{% endblock %}
 {% block content %}
     <h2>Посты авторов, на которых вы подписаны</h2>
-    {% for post in page_obj %}
-        <div>
-            <h3>{{ post.author.username }}</h3>
-            <p>{{ post.text|linebreaksbr }}</p>
-        </div>
-    {% endfor %}
+    {% if page_obj %}
+        {% for post in page_obj %}
+            <div>
+                <h3>{{ post.author.username }}</h3>
+                <p>{{ post.text|linebreaksbr }}</p>
+            </div>
+        {% endfor %}
+        {% include 'posts/includes/paginator.html' %} 
+    {% else %}
+        <p>Вы еще не подписаны ни на одного автора.</p>
+    {% endif %}
 {% endblock %}
