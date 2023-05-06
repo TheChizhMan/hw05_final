@@ -1,16 +1,14 @@
 {% extends 'base.html' %}
-{% block title %}Ваши подписки{% endblock %}
-{% block content %}
-    <h2>Посты авторов, на которых вы подписаны</h2>
-    {% if page_obj %}
-        {% for post in page_obj %}
-            <div>
-                <h3>{{ post.author.username }}</h3>
-                <p>{{ post.text|linebreaksbr }}</p>
-            </div>
-        {% endfor %}
-        {% include 'posts/includes/paginator.html' %} 
-    {% else %}
-        <p>Вы еще не подписаны ни на одного автора.</p>
-    {% endif %}
-{% endblock %}
+  {% block title %}
+    Мои подписки
+  {% endblock %}
+  {% block content %} 
+  {% include 'posts/includes/switcher.html' %}
+    <div class="container py-5">      
+      <h1>Последние обновления моих подписок</h1>
+      {% for post in page_obj %}
+          {% include 'posts/includes/post_core.html' %}
+      {% endfor %}
+      {% include 'posts/includes/paginator.html' %}
+    </div>
+  {% endblock %}
