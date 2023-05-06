@@ -1,0 +1,29 @@
+<!-- templates/about/tech.html -->
+{% extends "base.html" %}
+{% block title %}Технологии{% endblock %}
+{% block content %}
+<body>
+ <div class="container">
+  <h1>YaTube</h1>
+  <p>YaTube - социальная сеть для авторов, где они могут делиться своим творчеством.</p>
+  <aside class="col-12 col-md-3">
+    <ul class="list-group list-group-flush">
+      <li class="list-group-item">
+        Python 3.9
+      </li>
+      <li class="list-group-item">
+        Django 2.2.9
+      </li>
+    </ul>
+  </aside> 
+  <ul>
+   <li>Проект написан на Django 2.2.9 и Python 3.9</li>
+   <li>Пользователи могут создавать записи, загружать изображения и видео</li>
+   <li>Возможность комментирования записей и обмена сообщениями между пользователями</li>
+   <li>Реализована система подписок на авторов и отображения их записей в ленте</li>
+   <li>Реализована система модерирования записей и профилей пользователей</li>
+  </ul>
+ </div>
+</body>
+</html>
+{% endblock %}
