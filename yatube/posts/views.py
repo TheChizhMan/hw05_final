@@ -111,8 +111,8 @@ def add_comment(request, post_id):
 def follow_index(request):
     following = Follow.objects.filter(user=request.user).values_list('author',
                                                                      flat=True)
-    posts = Post.objects.filter(author__in=following)
-    context = {'posts': posts}
+    page_obj = Post.objects.filter(author__in=following)
+    context = {'page_obj': page_obj}
     return render(request, 'posts/follow.html', context)
 
 
