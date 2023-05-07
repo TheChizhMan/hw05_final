@@ -92,6 +92,7 @@ class Follow(models.Model):
     )
 
     class Meta:
+        # Вы имеете в виду команду " >>> python3 manage.py makemigrations" ?
         constraints = [
             models.UniqueConstraint(fields=['user', 'author'],
                                     name='unique_follow')

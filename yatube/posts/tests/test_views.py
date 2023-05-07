@@ -143,36 +143,71 @@ class CacheTestCase(TestCase):
         self.assertNotContains(response, self.post.text)
 
 
-class FollowTest(TestCase):
+class FollowTests(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.follower = User.objects.create_user(username='follower')
+        cls.following = User.objects.create_user(username='following')
+        cls.post = Post.objects.create(
+            text='Тестовый текст',
+            author=cls.following,
+        )
+        cls.follow_index_url = reverse('posts:follow_index')
+
     def setUp(self):
-        self.client = Client()
-        self.user1 = User.objects.create_user(username='user1',
-                                              password='password')
-        self.user2 = User.objects.create_user(username='user2',
-                                              password='password')
-        self.post = Post.objects.create(text='test post', author=self.user2)
-        self.client.login(username='user1', password='password')
+        self.authorized_follower = Client()
+        self.authorized_follower.force_login(self.follower)
+        self.authorized_following = Client()
+        self.authorized_following.force_login(self.following)
+        self.another_client = Client()
+        self.another_client.force_login(self.following)
+        cache.clear()
 
-    def test_follow(self):
-        """Тест подписки авторизованного юзера.
-        И отображение в ленте."""
-        response = self.client.get(f'/profile/{self.user2.username}/follow/')
-        self.assertRedirects(response, f'/profile/{self.user2.username}/')
-        self.assertTrue(Follow.objects.filter(user=self.user1,
-                                              author=self.user2).exists())
-        response = self.client.get('/follow/')
-        self.assertContains(response, self.post.text)
+    def test_auth_user_can_follow_author(self):
+        """Проверка работоспособности подписки."""
+        self.assertFalse(
+            Follow.objects.filter(
+                user=self.follower, author=self.following
+            ).exists()
+        )
+        self.authorized_follower.get(
+            reverse(
+                'posts:profile_follow',
+                kwargs={'username': self.following.username},
+            )
+        )
+        self.assertEqual(Follow.objects.count(), 1)
+        self.assertTrue(
+            Follow.objects.filter(
+                user=self.follower, author=self.following
+            ).exists()
+        )
 
-    def test_unfollow(self):
-        """Тест отписки авторизованного юзера.
-        И отображение в ленте."""
-        response = self.client.get(f'/profile/{self.user2.username}/follow/')
-        self.assertRedirects(response, f'/profile/{self.user2.username}/')
-        self.assertTrue(Follow.objects.filter(user=self.user1,
-                                              author=self.user2).exists())
-        response = self.client.get(f'/profile/{self.user2.username}/unfollow/')
-        self.assertRedirects(response, f'/profile/{self.user2.username}/')
-        self.assertFalse(Follow.objects.filter(user=self.user1,
-                                               author=self.user2).exists())
-        response = self.client.get('/follow/')
-        self.assertNotContains(response, self.post.text)
+    def test_auth_user_can_unfollow_author(self):
+        """Проверка работоспособности отписки."""
+        Follow.objects.create(user=self.follower, author=self.following)
+        self.authorized_follower.get(
+            reverse(
+                'posts:profile_unfollow',
+                kwargs={'username': self.following.username},
+            )
+        )
+        self.assertEqual(Follow.objects.count(), 0)
+        self.assertFalse(
+            Follow.objects.filter(
+                user=self.follower, author=self.following
+            ).exists()
+        )
+
+    def test_subscription_feed_for_auth_users(self):
+        """Проверяем появление в ленте подписчика."""
+        Follow.objects.create(user=self.follower, author=self.following)
+        response = self.authorized_follower.get(self.follow_index_url)
+        follower_index = response.context['page_obj'][0]
+        self.assertEqual(self.post, follower_index)
+
+    def test_subscription_feed_not_show_own_user_post(self):
+        """Проверяем непоявление в ленте подписчика."""
+        response = self.another_client.get(self.follow_index_url)
+        self.assertNotIn(self.post, response.context['page_obj'])
