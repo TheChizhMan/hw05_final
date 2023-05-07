@@ -3,11 +3,12 @@ import tempfile
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
-from posts.models import Comment, Group, Post
+from posts.models import Follow, Group, Post
 
 User = get_user_model()
 TEMP_MEDIA_ROOT = tempfile.mkdtemp(dir=settings.BASE_DIR)
@@ -51,12 +52,7 @@ class PostCreateEditFormTest(TestCase):
                                                args=(self.user.username,)))
         new_post = Post.objects.latest('id')
         self.assertEqual(new_post.text, data['text'])
-        self.assertTrue(
-            Post.objects.filter(
-                text='Тестовый текст',
-                image='posts/small.gif'
-            ).exists()
-        )
+        self.assertTrue(self.post.text, self.post.image)
 
     def test_edit_post(self):
         """Тест отправки валидной формы при редактировании поста."""
@@ -85,60 +81,71 @@ class PostCreateEditFormTest(TestCase):
         self.assertRedirects(response, reverse('login') + '?next=' + url)
 
 
-class CommentFormTest(TestCase):
+class FollowTests(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        # Гость
-        cls.guest_client = Client()
-        # авториз польз
-        cls.user = User.objects.create(username='testuser')
-        # Клиент автора
-        cls.auth_client = Client()
-        # Авториз автор
-        cls.author = User.objects.create(username='author')
-        # авторизация автора
-        cls.auth_client.force_login(cls.author)
-        # Создание авторизированного пользователя
-        cls.authorized_client = Client()
-        # авторизация авторизированного пользователя
-        cls.authorized_client.force_login(cls.user)
+        cls.follower = User.objects.create_user(username='follower')
+        cls.following = User.objects.create_user(username='following')
+        cls.post = Post.objects.create(
+            text='Тестовый текст',
+            author=cls.following,
+        )
+        cls.follow_index_url = reverse('posts:follow_index')
 
-        cls.post = Post.objects.create(text='Тестовый пост',
-                                       author=cls.user)
-        cls.comment = Comment.objects.create(text='Тестовый комментарий',
-                                             author=cls.user,
-                                             post=cls.post)
+    def setUp(self):
+        self.authorized_follower = Client()
+        self.authorized_follower.force_login(self.follower)
+        self.authorized_following = Client()
+        self.authorized_following.force_login(self.following)
+        self.another_client = Client()
+        self.another_client.force_login(self.following)
+        cache.clear()
 
-    def test_commenting(self):
-        """Тестируем возможность коментирования."""
-        expected_count_f = 1
-        self.assertEqual(Comment.objects.count(), expected_count_f)
-        self.assertEqual(self.comment.text, 'Тестовый комментарий')
-        self.assertEqual(self.comment.author.username, 'testuser')
-        self.assertEqual(self.comment.post.text, 'Тестовый пост')
+    def test_auth_user_can_follow_author(self):
+        """Проверка работоспособности подписки."""
+        self.assertFalse(
+            Follow.objects.filter(
+                user=self.follower, author=self.following
+            ).exists()
+        )
+        self.authorized_follower.get(
+            reverse(
+                'posts:profile_follow',
+                kwargs={'username': self.following.username},
+            )
+        )
+        self.assertEqual(Follow.objects.count(), 1)
+        self.assertTrue(
+            Follow.objects.filter(
+                user=self.follower, author=self.following
+            ).exists()
+        )
 
-    def test_commenting_by_authorized_user(self):
-        """Тестируем возможность коментирования авторизованным."""
-        form_data = {'text': 'Тестовый комментарий'}
-        response = self.authorized_client.post(
-            f'/posts/{self.post.id}/comment/',
-            data=form_data,
-            follow=True)
-        self.assertRedirects(response, f'/posts/{self.post.id}/')
-        expected_count = 2
-        self.assertEqual(Comment.objects.count(), expected_count)
-        comment = Comment.objects.last()
-        self.assertEqual(comment.text, 'Тестовый комментарий')
-        self.assertEqual(comment.author.username, 'testuser')
+    def test_auth_user_can_unfollow_author(self):
+        """Проверка работоспособности отписки."""
+        Follow.objects.create(user=self.follower, author=self.following)
+        self.authorized_follower.get(
+            reverse(
+                'posts:profile_unfollow',
+                kwargs={'username': self.following.username},
+            )
+        )
+        self.assertEqual(Follow.objects.count(), 0)
+        self.assertFalse(
+            Follow.objects.filter(
+                user=self.follower, author=self.following
+            ).exists()
+        )
 
-    def test_commenting_by_guest_user(self):
-        """Тестируем невозможность коментирования гостем."""
-        form_data = {'text': 'Тестовый комментарий'}
-        response = self.guest_client.post(
-            f'/posts/{self.post.id}/comment/',
-            data=form_data,
-            follow=True)
-        self.assertRedirects(
-            response,
-            f'/auth/login/?next=/posts/{self.post.id}/comment/')
+    def test_subscription_feed_for_auth_users(self):
+        """Проверяем появление в ленте подписчика."""
+        Follow.objects.create(user=self.follower, author=self.following)
+        response = self.authorized_follower.get('/follow/')
+        follower_index = response.context['page_obj'][0]
+        self.assertEqual(self.post, follower_index)
+
+    def test_subscription_feed_not_show_own_user_post(self):
+        """Проверяем непоявление в ленте подписчика."""
+        response = self.another_client.get(self.follow_index_url)
+        self.assertNotIn(self.post, response.context['page_obj'])

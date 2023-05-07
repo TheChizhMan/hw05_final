@@ -3,16 +3,18 @@
 {% block title %} Последние обновления на сайте {% endblock %}
 <main>
   {% block content %}
+  {% include 'posts/includes/switcher.html' %} 
   {% load cache %}
-  {% include 'posts/includes/switcher.html' %}  
+  {% cache 20 index_page %} 
     <h1>Последние обновления на сайте</h1>
     <article>
       {% for post in page_obj %}
         {% include 'posts/includes/post_core.html' %}
         {% endfor %}
         <hr>
-        {% include 'posts/includes/paginator.html' %}
-    <br>
+    {% endcache %}
+      <br>
+    {% include 'posts/includes/paginator.html' %}
     </article>
   {% endblock %} 
 </main>

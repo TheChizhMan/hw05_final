@@ -134,13 +134,13 @@ class CacheTestCase(TestCase):
         """Тест для проверки кеширования главной страницы."""
         cache.clear()
         response = self.client.get('/')
-        self.assertContains(response, 'test text')
+        self.assertContains(response, self.post.text)
         self.post.delete()
         response = self.client.get('/')
-        self.assertContains(response, 'test text')
+        self.assertContains(response, self.post.text)
         cache.clear()
         response = self.client.get('/')
-        self.assertNotContains(response, 'test text')
+        self.assertNotContains(response, self.post.text)
 
 
 class FollowTest(TestCase):
