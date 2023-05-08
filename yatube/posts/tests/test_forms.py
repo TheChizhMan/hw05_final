@@ -52,8 +52,7 @@ class PostCreateEditFormTest(TestCase):
         new_post = Post.objects.latest('id')
         self.assertEqual(new_post.text, data['text'])
         self.assertTrue(
-            Post.objects.filter(text=data['text'],
-                                image='posts/' + uploaded.name).exists()
+            Post.objects.filter(image='posts/' + uploaded.name).exists()
         )
 
     def test_edit_post(self):
@@ -111,7 +110,7 @@ class CommentFormTest(TestCase):
         expected_count = 2
         self.assertEqual(Comment.objects.count(), expected_count)
         comment = Comment.objects.last()
-        self.assertEqual(comment.text, 'Тестовый комментарий')
+        self.assertEqual(comment.text, self.comment.text)
         self.assertEqual(comment.author.username, 'testuser')
 
     def test_commenting_by_guest_user(self):
