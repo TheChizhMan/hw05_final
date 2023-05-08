@@ -102,6 +102,7 @@ class CommentFormTest(TestCase):
     def test_commenting_by_authorized_user(self):
         """Тестируем возможность коментирования авторизованным."""
         form_data = {'text': 'Тестовый комментарий'}
+        # извините, не понимаю, вроде сделал как надо
         response = self.authorized_client.post(
             f'/posts/{self.post.id}/comment/',
             data=form_data,
