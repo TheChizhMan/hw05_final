@@ -4,17 +4,13 @@
 <main>
   {% block content %}
   {% include 'posts/includes/switcher.html' %} 
-  {% load cache %}
-  {% cache 20 index_page %} 
     <h1>Последние обновления на сайте</h1>
     <article>
       {% for post in page_obj %}
         {% include 'posts/includes/post_core.html' %}
         {% endfor %}
         <hr>
-    {% endcache %}
       <br>
-    {% include 'posts/includes/paginator.html' %}
     </article>
   {% endblock %} 
 </main>

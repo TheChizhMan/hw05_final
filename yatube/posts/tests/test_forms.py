@@ -52,7 +52,7 @@ class PostCreateEditFormTest(TestCase):
         new_post = Post.objects.latest('id')
         self.assertEqual(new_post.text, data['text'])
         self.assertTrue(
-            Post.objects.filter(image='posts/' + uploaded.name).exists()
+            'posts/' + uploaded.name in new_post.image.url
         )
 
     def test_edit_post(self):
@@ -100,14 +100,15 @@ class CommentFormTest(TestCase):
                                              post=cls.post)
 
     def test_commenting_by_authorized_user(self):
-        """Тестируем возможность коментирования авторизованным."""
+        """Тестируем возможность комментирования авторизованным."""
         form_data = {'text': 'Тестовый комментарий'}
-        # извините, не понимаю, вроде сделал как надо
-        response = self.authorized_client.post(
-            f'/posts/{self.post.id}/comment/',
-            data=form_data,
-            follow=True)
-        self.assertRedirects(response, f'/posts/{self.post.id}/')
+        url = reverse('posts:add_comment', args=[self.post.id])
+        url_detail = reverse('posts:post_detail',
+                             args=[self.post.id])
+        response = self.authorized_client.post(url,
+                                               data=form_data,
+                                               follow=True)
+        self.assertRedirects(response, url_detail)
         expected_count = 2
         self.assertEqual(Comment.objects.count(), expected_count)
         comment = Comment.objects.last()
@@ -117,10 +118,9 @@ class CommentFormTest(TestCase):
     def test_commenting_by_guest_user(self):
         """Тестируем невозможность коментирования гостем."""
         form_data = {'text': 'Тестовый комментарий'}
-        response = self.guest_client.post(
-            f'/posts/{self.post.id}/comment/',
-            data=form_data,
-            follow=True)
-        self.assertRedirects(
-            response,
-            f'/auth/login/?next=/posts/{self.post.id}/comment/')
+        url = reverse('posts:add_comment', args=[self.post.id])
+        response = self.guest_client.post(url,
+                                          data=form_data,
+                                          follow=True)
+        url_login = reverse('login') + f'?next={url}'
+        self.assertRedirects(response, url_login)
