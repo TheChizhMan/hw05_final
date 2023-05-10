@@ -3,14 +3,10 @@
 {% block title %} Последние обновления на сайте {% endblock %}
 <main>
   {% block content %}
-  {% include 'posts/includes/switcher.html' %} 
+  {% include 'posts/includes/switcher.html' %}
     <h1>Последние обновления на сайте</h1>
     <article>
-      {% for post in page_obj %}
         {% include 'posts/includes/post_core.html' %}
-        {% endfor %}
-        <hr>
-      <br>
     </article>
   {% endblock %} 
 </main>
